@@ -4,4 +4,4 @@
 
 Your project is live at:
 
-**[https://vercel.com/thiago-carvalhos-projects-6b36c7ac/v0-next-js-condominium-app](https://vercel.com/thiago-carvalhos-projects-6b36c7ac/v0-next-js-condominium-app)**
+**https://v0-next-js-condominium-app-seven.vercel.app**
