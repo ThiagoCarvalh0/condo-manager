@@ -1,254 +1,274 @@
 "use client"
 
-import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
 import { useAuth } from "@/lib/auth-context"
-import { Calendar, Clock, MapPin, User, Search, Plus, CheckCircle, XCircle } from "lucide-react"
+import { Calendar, Plus, Clock, CheckCircle, X, Eye } from "lucide-react"
 import Link from "next/link"
 
 const mockReservas = [
   {
     id: "1",
-    area: "Salão de Festas",
-    solicitante: "João Silva - Apto 101",
-    data: "2024-01-20",
-    horarioInicio: "14:00",
-    horarioFim: "22:00",
+    espaco: "Salão de Festas",
+    data: "2024-07-20",
+    horaInicio: "19:00",
+    horaFim: "23:00",
     status: "confirmada",
-    evento: "Aniversário",
-    observacoes: "Festa de 15 anos",
+    evento: "Aniversário de 15 anos",
+    observacoes: "Festa para 50 pessoas",
+    valor: 150.0,
+    dataSolicitacao: "2024-07-01",
   },
   {
     id: "2",
-    area: "Churrasqueira",
-    solicitante: "Maria Santos - Apto 205",
-    data: "2024-01-22",
-    horarioInicio: "12:00",
-    horarioFim: "18:00",
-    status: "pendente",
-    evento: "Confraternização",
-    observacoes: "Reunião de família",
+    espaco: "Churrasqueira",
+    data: "2024-07-15",
+    horaInicio: "12:00",
+    horaFim: "18:00",
+    status: "confirmada",
+    evento: "Almoço em família",
+    observacoes: "Reunião familiar",
+    valor: 80.0,
+    dataSolicitacao: "2024-06-28",
   },
   {
     id: "3",
-    area: "Quadra de Tênis",
-    solicitante: "Pedro Costa - Apto 302",
-    data: "2024-01-18",
-    horarioInicio: "08:00",
-    horarioFim: "10:00",
-    status: "cancelada",
-    evento: "Treino",
-    observacoes: "Cancelado por motivos pessoais",
+    espaco: "Quadra Esportiva",
+    data: "2024-07-25",
+    horaInicio: "16:00",
+    horaFim: "18:00",
+    status: "pendente",
+    evento: "Jogo de futebol",
+    observacoes: "Partida entre amigos",
+    valor: 0.0,
+    dataSolicitacao: "2024-07-05",
+  },
+  {
+    id: "4",
+    espaco: "Salão de Festas",
+    data: "2024-06-30",
+    horaInicio: "14:00",
+    horaFim: "18:00",
+    status: "realizada",
+    evento: "Festa Junina",
+    observacoes: "Festa temática",
+    valor: 150.0,
+    dataSolicitacao: "2024-06-15",
   },
 ]
 
-export default function ReservasAdminPage() {
+export default function ReservasPage() {
   const { user } = useAuth()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filterStatus, setFilterStatus] = useState("todos")
 
-  if (!user || user.role !== "admin") {
+  if (!user || user.role !== "morador") {
     return (
       <div className="text-center py-10">
-        <p className="text-red-500">Acesso negado. Apenas administradores podem acessar esta página.</p>
+        <p className="text-red-500">Acesso negado. Apenas moradores podem acessar esta página.</p>
       </div>
     )
   }
 
-  const condominioAtual = user.condominios.find((c) => c.id === user.activeCondominioId)
-
-  const filteredReservas = mockReservas.filter((reserva) => {
-    const matchesSearch =
-      reserva.area.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      reserva.solicitante.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      reserva.evento.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesFilter = filterStatus === "todos" || reserva.status === filterStatus
-    return matchesSearch && matchesFilter
-  })
-
-  const getStatusColor = (status: string) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case "confirmada":
-        return "bg-green-100 text-green-800"
+        return <Badge className="bg-green-100 text-green-800">Confirmada</Badge>
       case "pendente":
-        return "bg-yellow-100 text-yellow-800"
+        return <Badge className="bg-yellow-100 text-yellow-800">Pendente</Badge>
       case "cancelada":
-        return "bg-red-100 text-red-800"
+        return <Badge className="bg-red-100 text-red-800">Cancelada</Badge>
+      case "realizada":
+        return <Badge className="bg-blue-100 text-blue-800">Realizada</Badge>
       default:
-        return "bg-gray-100 text-gray-800"
+        return <Badge variant="secondary">Desconhecido</Badge>
     }
   }
 
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "confirmada":
+        return <CheckCircle className="h-5 w-5 text-green-600" />
+      case "pendente":
+        return <Clock className="h-5 w-5 text-yellow-600" />
+      case "cancelada":
+        return <X className="h-5 w-5 text-red-600" />
+      case "realizada":
+        return <CheckCircle className="h-5 w-5 text-blue-600" />
+      default:
+        return <Clock className="h-5 w-5 text-gray-600" />
+    }
+  }
+
+  const reservasAtivas = mockReservas.filter((r) => r.status === "confirmada" || r.status === "pendente").length
+  const proximaReserva = mockReservas
+    .filter((r) => new Date(r.data) >= new Date() && (r.status === "confirmada" || r.status === "pendente"))
+    .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime())[0]
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gestão de Reservas</h1>
-          <p className="text-gray-600">Gerencie reservas de áreas comuns - {condominioAtual?.name}</p>
+          <h1 className="text-2xl font-bold text-gray-900">Minhas Reservas</h1>
+          <p className="text-gray-600">Gerencie suas reservas de espaços do condomínio</p>
         </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" asChild>
-            <Link href="/dashboard/reservas/agenda">
-              <Calendar className="mr-2 h-4 w-4" />
-              Ver Agenda
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link href="/dashboard/reservas/nova">
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Reserva
-            </Link>
-          </Button>
-        </div>
+        <Button asChild>
+          <Link href="/dashboard/reservas/nova">
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Reserva
+          </Link>
+        </Button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Reservas Hoje</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">3</div>
-            <p className="text-xs text-muted-foreground">Áreas reservadas</p>
+      {/* Resumo */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="border-l-4 border-l-blue-500">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total de Reservas</p>
+                <p className="text-lg font-bold text-gray-900">{mockReservas.length}</p>
+              </div>
+              <Calendar className="h-8 w-8 text-blue-500" />
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">5</div>
-            <p className="text-xs text-muted-foreground">Aguardando aprovação</p>
+
+        <Card className="border-l-4 border-l-green-500">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Reservas Ativas</p>
+                <p className="text-lg font-bold text-gray-900">{reservasAtivas}</p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-green-500" />
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Confirmadas</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">28</div>
-            <p className="text-xs text-muted-foreground">Este mês</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Taxa de Ocupação</CardTitle>
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">78%</div>
-            <p className="text-xs text-muted-foreground">Média mensal</p>
+
+        <Card className="border-l-4 border-l-purple-500">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Próxima Reserva</p>
+                <p className="text-lg font-bold text-gray-900">
+                  {proximaReserva ? new Date(proximaReserva.data).toLocaleDateString("pt-BR") : "Nenhuma"}
+                </p>
+              </div>
+              <Clock className="h-8 w-8 text-purple-500" />
+            </div>
+            {proximaReserva && <p className="text-xs text-gray-500 mt-1">{proximaReserva.espaco}</p>}
           </CardContent>
         </Card>
       </div>
 
-      {/* Filtros e Busca */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Buscar por área, solicitante ou evento..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+      {/* Próxima Reserva Destacada */}
+      {proximaReserva && (
+        <Card className="border-green-200 bg-green-50">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-3">
+              <Calendar className="h-8 w-8 text-green-600" />
+              <div>
+                <h3 className="font-semibold text-green-900">Próxima Reserva</h3>
+                <p className="text-green-700">
+                  <strong>{proximaReserva.espaco}</strong> - {new Date(proximaReserva.data).toLocaleDateString("pt-BR")}{" "}
+                  das {proximaReserva.horaInicio} às {proximaReserva.horaFim}
+                </p>
+                <p className="text-green-600 text-sm">{proximaReserva.evento}</p>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant={filterStatus === "todos" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilterStatus("todos")}
-              >
-                Todos
-              </Button>
-              <Button
-                variant={filterStatus === "pendente" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilterStatus("pendente")}
-              >
-                Pendentes
-              </Button>
-              <Button
-                variant={filterStatus === "confirmada" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilterStatus("confirmada")}
-              >
-                Confirmadas
-              </Button>
-              <Button
-                variant={filterStatus === "cancelada" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilterStatus("cancelada")}
-              >
-                Canceladas
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Lista de Reservas */}
       <Card>
         <CardHeader>
-          <CardTitle>Reservas ({filteredReservas.length})</CardTitle>
+          <CardTitle>Histórico de Reservas</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredReservas.map((reserva) => (
-              <div
-                key={reserva.id}
-                className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
-              >
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <h3 className="font-semibold">{reserva.area}</h3>
-                    <Badge className={getStatusColor(reserva.status)}>{reserva.status}</Badge>
+            {mockReservas.map((reserva) => (
+              <div key={reserva.id} className="border rounded-lg p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start space-x-3">
+                    {getStatusIcon(reserva.status)}
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <h3 className="font-medium text-gray-900">{reserva.espaco}</h3>
+                        {getStatusBadge(reserva.status)}
+                      </div>
+                      <p className="text-sm text-gray-600 mb-2">{reserva.evento}</p>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-xs text-gray-500">
+                        <p>
+                          <strong>Data:</strong> {new Date(reserva.data).toLocaleDateString("pt-BR")}
+                        </p>
+                        <p>
+                          <strong>Horário:</strong> {reserva.horaInicio} às {reserva.horaFim}
+                        </p>
+                        <p>
+                          <strong>Valor:</strong> {reserva.valor > 0 ? `R$ ${reserva.valor.toFixed(2)}` : "Gratuito"}
+                        </p>
+                        <p>
+                          <strong>Solicitado em:</strong>{" "}
+                          {new Date(reserva.dataSolicitacao).toLocaleDateString("pt-BR")}
+                        </p>
+                      </div>
+                      {reserva.observacoes && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          <strong>Observações:</strong> {reserva.observacoes}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-600">{reserva.evento}</p>
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-gray-500">
-                    <div className="flex items-center">
-                      <User className="mr-1 h-3 w-3" />
-                      {reserva.solicitante}
-                    </div>
-                    <div className="flex items-center">
-                      <Calendar className="mr-1 h-3 w-3" />
-                      {new Date(reserva.data).toLocaleDateString()}
-                    </div>
-                    <div className="flex items-center">
-                      <Clock className="mr-1 h-3 w-3" />
-                      {reserva.horarioInicio} às {reserva.horarioFim}
-                    </div>
+                  <div className="flex space-x-2">
+                    <Button variant="outline" size="sm">
+                      <Eye className="h-4 w-4 mr-1" />
+                      Detalhes
+                    </Button>
+                    {reserva.status === "pendente" && (
+                      <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                        Cancelar
+                      </Button>
+                    )}
                   </div>
-                  {reserva.observacoes && <p className="text-xs text-gray-500 italic">{reserva.observacoes}</p>}
-                </div>
-                <div className="flex space-x-2 mt-2 sm:mt-0">
-                  <Button variant="outline" size="sm">
-                    Ver Detalhes
-                  </Button>
-                  {reserva.status === "pendente" && (
-                    <>
-                      <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                        <CheckCircle className="mr-1 h-3 w-3" />
-                        Aprovar
-                      </Button>
-                      <Button size="sm" variant="destructive">
-                        <XCircle className="mr-1 h-3 w-3" />
-                        Rejeitar
-                      </Button>
-                    </>
-                  )}
                 </div>
               </div>
             ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Espaços Disponíveis */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Espaços Disponíveis para Reserva</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="p-4 border rounded-lg">
+              <h4 className="font-medium text-gray-900">Salão de Festas</h4>
+              <p className="text-sm text-gray-600 mb-2">Capacidade: 80 pessoas</p>
+              <p className="text-sm font-medium text-green-600">R$ 150,00 / evento</p>
+              <Button variant="outline" size="sm" className="mt-2 w-full">
+                Reservar
+              </Button>
+            </div>
+            <div className="p-4 border rounded-lg">
+              <h4 className="font-medium text-gray-900">Churrasqueira</h4>
+              <p className="text-sm text-gray-600 mb-2">Capacidade: 30 pessoas</p>
+              <p className="text-sm font-medium text-green-600">R$ 80,00 / evento</p>
+              <Button variant="outline" size="sm" className="mt-2 w-full">
+                Reservar
+              </Button>
+            </div>
+            <div className="p-4 border rounded-lg">
+              <h4 className="font-medium text-gray-900">Quadra Esportiva</h4>
+              <p className="text-sm text-gray-600 mb-2">Futebol, vôlei, basquete</p>
+              <p className="text-sm font-medium text-green-600">Gratuito</p>
+              <Button variant="outline" size="sm" className="mt-2 w-full">
+                Reservar
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

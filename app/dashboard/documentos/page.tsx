@@ -1,222 +1,281 @@
 "use client"
 
-import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/lib/auth-context"
-import { FileText, Upload, Download, Search, Eye, Trash2, Folder } from "lucide-react"
-import Link from "next/link"
+import { FileText, Download, Eye, Calendar, Search, Filter } from "lucide-react"
 
 const mockDocumentos = [
   {
     id: "1",
-    nome: "Ata da Assembleia - Janeiro 2024",
-    categoria: "assembleia",
-    tipo: "PDF",
-    tamanho: "2.5 MB",
-    dataUpload: "2024-01-15",
-    downloads: 45,
-    publico: true,
+    nome: "Ata da Assembleia - Junho 2024",
+    tipo: "ata",
+    categoria: "Assembleia",
+    dataPublicacao: "2024-06-15",
+    tamanho: "2.3 MB",
+    formato: "PDF",
+    descricao: "Ata da assembleia geral ordinária de junho de 2024",
   },
   {
     id: "2",
-    nome: "Regulamento Interno",
-    categoria: "regulamento",
-    tipo: "PDF",
+    nome: "Regulamento Interno do Condomínio",
+    tipo: "regulamento",
+    categoria: "Regulamento",
+    dataPublicacao: "2024-01-10",
     tamanho: "1.8 MB",
-    dataUpload: "2024-01-10",
-    downloads: 89,
-    publico: true,
+    formato: "PDF",
+    descricao: "Regulamento interno atualizado com as novas regras",
   },
   {
     id: "3",
-    nome: "Orçamento Anual 2024",
-    categoria: "financeiro",
-    tipo: "XLSX",
+    nome: "Demonstrativo Financeiro - Junho 2024",
+    tipo: "financeiro",
+    categoria: "Financeiro",
+    dataPublicacao: "2024-07-01",
     tamanho: "856 KB",
-    dataUpload: "2024-01-08",
-    downloads: 23,
-    publico: false,
+    formato: "PDF",
+    descricao: "Demonstrativo das receitas e despesas do mês de junho",
+  },
+  {
+    id: "4",
+    nome: "Manual do Morador",
+    tipo: "manual",
+    categoria: "Informativo",
+    dataPublicacao: "2024-01-15",
+    tamanho: "3.2 MB",
+    formato: "PDF",
+    descricao: "Manual completo com informações para novos moradores",
+  },
+  {
+    id: "5",
+    nome: "Convenção do Condomínio",
+    tipo: "convencao",
+    categoria: "Legal",
+    dataPublicacao: "2023-12-01",
+    tamanho: "2.1 MB",
+    formato: "PDF",
+    descricao: "Convenção registrada em cartório",
+  },
+  {
+    id: "6",
+    nome: "Relatório de Manutenção - 1º Semestre 2024",
+    tipo: "relatorio",
+    categoria: "Manutenção",
+    dataPublicacao: "2024-07-05",
+    tamanho: "1.4 MB",
+    formato: "PDF",
+    descricao: "Relatório das manutenções realizadas no primeiro semestre",
   },
 ]
 
-export default function DocumentosAdminPage() {
+export default function DocumentosPage() {
   const { user } = useAuth()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filterCategoria, setFilterCategoria] = useState("todos")
 
-  if (!user || user.role !== "admin") {
+  if (!user || user.role !== "morador") {
     return (
       <div className="text-center py-10">
-        <p className="text-red-500">Acesso negado. Apenas administradores podem acessar esta página.</p>
+        <p className="text-red-500">Acesso negado. Apenas moradores podem acessar esta página.</p>
       </div>
     )
   }
 
-  const condominioAtual = user.condominios.find((c) => c.id === user.activeCondominioId)
+  const getTipoBadge = (tipo: string) => {
+    switch (tipo) {
+      case "ata":
+        return <Badge className="bg-blue-100 text-blue-800">Ata</Badge>
+      case "regulamento":
+        return <Badge className="bg-purple-100 text-purple-800">Regulamento</Badge>
+      case "financeiro":
+        return <Badge className="bg-green-100 text-green-800">Financeiro</Badge>
+      case "manual":
+        return <Badge className="bg-orange-100 text-orange-800">Manual</Badge>
+      case "convencao":
+        return <Badge className="bg-red-100 text-red-800">Convenção</Badge>
+      case "relatorio":
+        return <Badge className="bg-gray-100 text-gray-800">Relatório</Badge>
+      default:
+        return <Badge variant="secondary">Outro</Badge>
+    }
+  }
 
-  const filteredDocumentos = mockDocumentos.filter((documento) => {
-    const matchesSearch = documento.nome.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesFilter = filterCategoria === "todos" || documento.categoria === filterCategoria
-    return matchesSearch && matchesFilter
-  })
+  const documentosRecentes = mockDocumentos.filter((doc) => {
+    const dataDoc = new Date(doc.dataPublicacao)
+    const trintaDiasAtras = new Date()
+    trintaDiasAtras.setDate(trintaDiasAtras.getDate() - 30)
+    return dataDoc >= trintaDiasAtras
+  }).length
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gestão de Documentos</h1>
-          <p className="text-gray-600">Gerencie documentos do condomínio - {condominioAtual?.name}</p>
+          <h1 className="text-2xl font-bold text-gray-900">Documentos</h1>
+          <p className="text-gray-600">Acesse todos os documentos importantes do condomínio</p>
         </div>
-        <Button asChild>
-          <Link href="/dashboard/documentos/upload">
-            <Upload className="mr-2 h-4 w-4" />
-            Upload Documento
-          </Link>
-        </Button>
+        <div className="flex space-x-2">
+          <Button variant="outline">
+            <Filter className="h-4 w-4 mr-2" />
+            Filtrar
+          </Button>
+        </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Documentos</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">47</div>
-            <p className="text-xs text-muted-foreground">Todos os documentos</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Documentos Públicos</CardTitle>
-            <Eye className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">32</div>
-            <p className="text-xs text-muted-foreground">Visíveis aos moradores</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Downloads Este Mês</CardTitle>
-            <Download className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">234</div>
-            <p className="text-xs text-muted-foreground">+18% vs mês anterior</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Espaço Utilizado</CardTitle>
-            <Folder className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">2.8 GB</div>
-            <p className="text-xs text-muted-foreground">de 10 GB disponíveis</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filtros e Busca */}
+      {/* Busca */}
       <Card>
-        <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Buscar documentos..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant={filterCategoria === "todos" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilterCategoria("todos")}
-              >
-                Todos
-              </Button>
-              <Button
-                variant={filterCategoria === "assembleia" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilterCategoria("assembleia")}
-              >
-                Assembleias
-              </Button>
-              <Button
-                variant={filterCategoria === "regulamento" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilterCategoria("regulamento")}
-              >
-                Regulamentos
-              </Button>
-              <Button
-                variant={filterCategoria === "financeiro" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilterCategoria("financeiro")}
-              >
-                Financeiro
-              </Button>
-            </div>
+        <CardContent className="p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar documentos..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
           </div>
         </CardContent>
       </Card>
 
+      {/* Resumo */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="border-l-4 border-l-blue-500">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total de Documentos</p>
+                <p className="text-lg font-bold text-gray-900">{mockDocumentos.length}</p>
+              </div>
+              <FileText className="h-8 w-8 text-blue-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-green-500">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Adicionados Recentemente</p>
+                <p className="text-lg font-bold text-gray-900">{documentosRecentes}</p>
+              </div>
+              <Calendar className="h-8 w-8 text-green-500" />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Últimos 30 dias</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-purple-500">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Categorias</p>
+                <p className="text-lg font-bold text-gray-900">6</p>
+              </div>
+              <Filter className="h-8 w-8 text-purple-500" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Lista de Documentos */}
       <Card>
         <CardHeader>
-          <CardTitle>Documentos ({filteredDocumentos.length})</CardTitle>
+          <CardTitle>Todos os Documentos</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredDocumentos.map((documento) => (
-              <div
-                key={documento.id}
-                className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
-              >
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center space-x-2">
-                    <FileText className="h-4 w-4 text-gray-500" />
-                    <h3 className="font-semibold">{documento.nome}</h3>
-                    <Badge variant="outline">{documento.categoria}</Badge>
-                    <Badge variant={documento.publico ? "default" : "secondary"}>
-                      {documento.publico ? "Público" : "Privado"}
-                    </Badge>
+            {mockDocumentos.map((documento) => (
+              <div key={documento.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center space-x-4">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <FileText className="h-6 w-6 text-blue-600" />
                   </div>
-                  <div className="flex items-center space-x-4 text-sm text-gray-500">
-                    <span>{documento.tipo}</span>
-                    <span>{documento.tamanho}</span>
-                    <span>Enviado em {new Date(documento.dataUpload).toLocaleDateString()}</span>
-                    <span>{documento.downloads} downloads</span>
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <h3 className="font-medium text-gray-900">{documento.nome}</h3>
+                      {getTipoBadge(documento.tipo)}
+                    </div>
+                    <p className="text-sm text-gray-600 mb-1">{documento.descricao}</p>
+                    <div className="flex items-center space-x-4 text-xs text-gray-500">
+                      <span>Publicado em {new Date(documento.dataPublicacao).toLocaleDateString("pt-BR")}</span>
+                      <span>{documento.formato}</span>
+                      <span>{documento.tamanho}</span>
+                    </div>
                   </div>
                 </div>
-                <div className="flex space-x-2 mt-2 sm:mt-0">
+                <div className="flex space-x-2">
                   <Button variant="outline" size="sm">
-                    <Eye className="mr-1 h-3 w-3" />
+                    <Eye className="h-4 w-4 mr-1" />
                     Visualizar
                   </Button>
                   <Button variant="outline" size="sm">
-                    <Download className="mr-1 h-3 w-3" />
-                    Download
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    Editar
-                  </Button>
-                  <Button variant="destructive" size="sm">
-                    <Trash2 className="mr-1 h-3 w-3" />
-                    Excluir
+                    <Download className="h-4 w-4 mr-1" />
+                    Baixar
                   </Button>
                 </div>
               </div>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Categorias */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Documentos por Categoria</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="text-center p-4 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100">
+              <FileText className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+              <p className="font-medium">Atas</p>
+              <p className="text-sm text-gray-600">{mockDocumentos.filter((d) => d.tipo === "ata").length} docs</p>
+            </div>
+            <div className="text-center p-4 bg-green-50 rounded-lg cursor-pointer hover:bg-green-100">
+              <FileText className="h-6 w-6 text-green-600 mx-auto mb-2" />
+              <p className="font-medium">Financeiro</p>
+              <p className="text-sm text-gray-600">
+                {mockDocumentos.filter((d) => d.tipo === "financeiro").length} docs
+              </p>
+            </div>
+            <div className="text-center p-4 bg-purple-50 rounded-lg cursor-pointer hover:bg-purple-100">
+              <FileText className="h-6 w-6 text-purple-600 mx-auto mb-2" />
+              <p className="font-medium">Regulamentos</p>
+              <p className="text-sm text-gray-600">
+                {mockDocumentos.filter((d) => d.tipo === "regulamento").length} docs
+              </p>
+            </div>
+            <div className="text-center p-4 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100">
+              <FileText className="h-6 w-6 text-orange-600 mx-auto mb-2" />
+              <p className="font-medium">Manuais</p>
+              <p className="text-sm text-gray-600">{mockDocumentos.filter((d) => d.tipo === "manual").length} docs</p>
+            </div>
+            <div className="text-center p-4 bg-red-50 rounded-lg cursor-pointer hover:bg-red-100">
+              <FileText className="h-6 w-6 text-red-600 mx-auto mb-2" />
+              <p className="font-medium">Legal</p>
+              <p className="text-sm text-gray-600">
+                {mockDocumentos.filter((d) => d.tipo === "convencao").length} docs
+              </p>
+            </div>
+            <div className="text-center p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+              <FileText className="h-6 w-6 text-gray-600 mx-auto mb-2" />
+              <p className="font-medium">Relatórios</p>
+              <p className="text-sm text-gray-600">
+                {mockDocumentos.filter((d) => d.tipo === "relatorio").length} docs
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Informações Importantes */}
+      <Card className="border-blue-200 bg-blue-50">
+        <CardContent className="p-6">
+          <h3 className="font-semibold text-blue-900 mb-2">Informações sobre Documentos</h3>
+          <ul className="text-blue-700 text-sm space-y-1">
+            <li>• Todos os documentos estão em formato PDF</li>
+            <li>• Documentos são atualizados regularmente pela administração</li>
+            <li>• Para dúvidas sobre documentos, entre em contato com o síndico</li>
+            <li>• Mantenha sempre a versão mais recente dos regulamentos</li>
+          </ul>
         </CardContent>
       </Card>
     </div>
