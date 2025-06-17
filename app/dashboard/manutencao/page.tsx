@@ -6,46 +6,46 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/lib/auth-context"
-import { Calendar, Clock, MapPin, User, Search, Plus, CheckCircle, XCircle } from "lucide-react"
+import { Wrench, Clock, CheckCircle, AlertTriangle, Calendar, User, Search, Plus } from "lucide-react"
 import Link from "next/link"
 
-const mockReservas = [
+const mockSolicitacoes = [
   {
     id: "1",
-    area: "Salão de Festas",
+    titulo: "Vazamento no banheiro",
+    descricao: "Torneira da pia está vazando constantemente",
     solicitante: "João Silva - Apto 101",
-    data: "2024-01-20",
-    horarioInicio: "14:00",
-    horarioFim: "22:00",
-    status: "confirmada",
-    evento: "Aniversário",
-    observacoes: "Festa de 15 anos",
+    categoria: "hidraulica",
+    prioridade: "alta",
+    status: "pendente",
+    dataAbertura: "2024-01-15",
+    dataPrevisao: "2024-01-18",
   },
   {
     id: "2",
-    area: "Churrasqueira",
+    titulo: "Lâmpada queimada no corredor",
+    descricao: "Lâmpada do 3º andar está queimada",
     solicitante: "Maria Santos - Apto 205",
-    data: "2024-01-22",
-    horarioInicio: "12:00",
-    horarioFim: "18:00",
-    status: "pendente",
-    evento: "Confraternização",
-    observacoes: "Reunião de família",
+    categoria: "eletrica",
+    prioridade: "media",
+    status: "em_andamento",
+    dataAbertura: "2024-01-14",
+    dataPrevisao: "2024-01-16",
   },
   {
     id: "3",
-    area: "Quadra de Tênis",
+    titulo: "Portão da garagem com defeito",
+    descricao: "Portão não está abrindo com o controle remoto",
     solicitante: "Pedro Costa - Apto 302",
-    data: "2024-01-18",
-    horarioInicio: "08:00",
-    horarioFim: "10:00",
-    status: "cancelada",
-    evento: "Treino",
-    observacoes: "Cancelado por motivos pessoais",
+    categoria: "geral",
+    prioridade: "baixa",
+    status: "concluida",
+    dataAbertura: "2024-01-10",
+    dataConclusao: "2024-01-12",
   },
 ]
 
-export default function ReservasAdminPage() {
+export default function ManutencaoPage() {
   const { user } = useAuth()
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState("todos")
@@ -60,23 +60,35 @@ export default function ReservasAdminPage() {
 
   const condominioAtual = user.condominios.find((c) => c.id === user.activeCondominioId)
 
-  const filteredReservas = mockReservas.filter((reserva) => {
+  const filteredSolicitacoes = mockSolicitacoes.filter((solicitacao) => {
     const matchesSearch =
-      reserva.area.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      reserva.solicitante.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      reserva.evento.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesFilter = filterStatus === "todos" || reserva.status === filterStatus
+      solicitacao.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      solicitacao.solicitante.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesFilter = filterStatus === "todos" || solicitacao.status === filterStatus
     return matchesSearch && matchesFilter
   })
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "confirmada":
-        return "bg-green-100 text-green-800"
       case "pendente":
         return "bg-yellow-100 text-yellow-800"
-      case "cancelada":
+      case "em_andamento":
+        return "bg-blue-100 text-blue-800"
+      case "concluida":
+        return "bg-green-100 text-green-800"
+      default:
+        return "bg-gray-100 text-gray-800"
+    }
+  }
+
+  const getPriorityColor = (prioridade: string) => {
+    switch (prioridade) {
+      case "alta":
         return "bg-red-100 text-red-800"
+      case "media":
+        return "bg-yellow-100 text-yellow-800"
+      case "baixa":
+        return "bg-green-100 text-green-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
@@ -86,65 +98,57 @@ export default function ReservasAdminPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gestão de Reservas</h1>
-          <p className="text-gray-600">Gerencie reservas de áreas comuns - {condominioAtual?.name}</p>
+          <h1 className="text-2xl font-bold text-gray-900">Manutenção</h1>
+          <p className="text-gray-600">Gerencie solicitações de manutenção - {condominioAtual?.name}</p>
         </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" asChild>
-            <Link href="/dashboard/reservas/agenda">
-              <Calendar className="mr-2 h-4 w-4" />
-              Ver Agenda
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link href="/dashboard/reservas/nova">
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Reserva
-            </Link>
-          </Button>
-        </div>
+        <Button asChild>
+          <Link href="/dashboard/manutencao/nova">
+            <Plus className="mr-2 h-4 w-4" />
+            Nova Solicitação
+          </Link>
+        </Button>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Reservas Hoje</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">3</div>
-            <p className="text-xs text-muted-foreground">Áreas reservadas</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
             <Clock className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">5</div>
-            <p className="text-xs text-muted-foreground">Aguardando aprovação</p>
+            <div className="text-2xl font-bold text-yellow-600">8</div>
+            <p className="text-xs text-muted-foreground">Aguardando atendimento</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Confirmadas</CardTitle>
+            <CardTitle className="text-sm font-medium">Em Andamento</CardTitle>
+            <Wrench className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">5</div>
+            <p className="text-xs text-muted-foreground">Sendo executadas</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Concluídas</CardTitle>
             <CheckCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">28</div>
+            <div className="text-2xl font-bold text-green-600">23</div>
             <p className="text-xs text-muted-foreground">Este mês</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Taxa de Ocupação</CardTitle>
-            <MapPin className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Alta Prioridade</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">78%</div>
-            <p className="text-xs text-muted-foreground">Média mensal</p>
+            <div className="text-2xl font-bold text-red-600">3</div>
+            <p className="text-xs text-muted-foreground">Requer atenção urgente</p>
           </CardContent>
         </Card>
       </div>
@@ -156,7 +160,7 @@ export default function ReservasAdminPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="Buscar por área, solicitante ou evento..."
+                placeholder="Buscar por título ou solicitante..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -178,74 +182,65 @@ export default function ReservasAdminPage() {
                 Pendentes
               </Button>
               <Button
-                variant={filterStatus === "confirmada" ? "default" : "outline"}
+                variant={filterStatus === "em_andamento" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setFilterStatus("confirmada")}
+                onClick={() => setFilterStatus("em_andamento")}
               >
-                Confirmadas
+                Em Andamento
               </Button>
               <Button
-                variant={filterStatus === "cancelada" ? "default" : "outline"}
+                variant={filterStatus === "concluida" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setFilterStatus("cancelada")}
+                onClick={() => setFilterStatus("concluida")}
               >
-                Canceladas
+                Concluídas
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Lista de Reservas */}
+      {/* Lista de Solicitações */}
       <Card>
         <CardHeader>
-          <CardTitle>Reservas ({filteredReservas.length})</CardTitle>
+          <CardTitle>Solicitações de Manutenção ({filteredSolicitacoes.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredReservas.map((reserva) => (
+            {filteredSolicitacoes.map((solicitacao) => (
               <div
-                key={reserva.id}
+                key={solicitacao.id}
                 className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
               >
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center space-x-2">
-                    <h3 className="font-semibold">{reserva.area}</h3>
-                    <Badge className={getStatusColor(reserva.status)}>{reserva.status}</Badge>
+                    <h3 className="font-semibold">{solicitacao.titulo}</h3>
+                    <Badge className={getStatusColor(solicitacao.status)}>{solicitacao.status.replace("_", " ")}</Badge>
+                    <Badge className={getPriorityColor(solicitacao.prioridade)}>{solicitacao.prioridade}</Badge>
                   </div>
-                  <p className="text-sm text-gray-600">{reserva.evento}</p>
+                  <p className="text-sm text-gray-600">{solicitacao.descricao}</p>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-gray-500">
                     <div className="flex items-center">
                       <User className="mr-1 h-3 w-3" />
-                      {reserva.solicitante}
+                      {solicitacao.solicitante}
                     </div>
                     <div className="flex items-center">
                       <Calendar className="mr-1 h-3 w-3" />
-                      {new Date(reserva.data).toLocaleDateString()}
+                      Aberto em {new Date(solicitacao.dataAbertura).toLocaleDateString()}
                     </div>
-                    <div className="flex items-center">
-                      <Clock className="mr-1 h-3 w-3" />
-                      {reserva.horarioInicio} às {reserva.horarioFim}
-                    </div>
+                    {solicitacao.dataPrevisao && (
+                      <div className="flex items-center">
+                        <Clock className="mr-1 h-3 w-3" />
+                        Previsão: {new Date(solicitacao.dataPrevisao).toLocaleDateString()}
+                      </div>
+                    )}
                   </div>
-                  {reserva.observacoes && <p className="text-xs text-gray-500 italic">{reserva.observacoes}</p>}
                 </div>
                 <div className="flex space-x-2 mt-2 sm:mt-0">
                   <Button variant="outline" size="sm">
                     Ver Detalhes
                   </Button>
-                  {reserva.status === "pendente" && (
-                    <>
-                      <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                        <CheckCircle className="mr-1 h-3 w-3" />
-                        Aprovar
-                      </Button>
-                      <Button size="sm" variant="destructive">
-                        <XCircle className="mr-1 h-3 w-3" />
-                        Rejeitar
-                      </Button>
-                    </>
-                  )}
+                  {solicitacao.status !== "concluida" && <Button size="sm">Atualizar Status</Button>}
                 </div>
               </div>
             ))}

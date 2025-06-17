@@ -1,229 +1,291 @@
 "use client"
 
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/lib/auth-context"
-import { Bell, Calendar, AlertTriangle, Info, CheckCircle } from "lucide-react"
+import { Bell, Plus, Search, Calendar, Eye, Edit, Trash2, Send, Users, AlertTriangle } from "lucide-react"
+import Link from "next/link"
 
 const mockAvisos = [
   {
     id: "1",
-    titulo: "Manutenção do Elevador Social",
-    conteudo:
-      "Informamos que será realizada manutenção preventiva no elevador social no dia 05/07/2024, das 8h às 12h. Durante este período, o elevador ficará indisponível. Pedimos a compreensão de todos.",
-    tipo: "manutencao",
+    titulo: "Manutenção do Elevador - Bloco A",
+    conteudo: "Informamos que o elevador do Bloco A passará por manutenção preventiva no dia 25/01/2024...",
+    categoria: "Manutenção",
     prioridade: "alta",
-    dataPublicacao: "2024-07-03",
-    dataEvento: "2024-07-05",
-    lido: false,
-    autor: "Síndico - Maria Silva",
+    dataPublicacao: "2024-01-20",
+    dataExpiracao: "2024-01-30",
+    status: "ativo",
+    visualizacoes: 89,
+    autor: "Administração",
   },
   {
     id: "2",
     titulo: "Assembleia Geral Ordinária",
-    conteudo:
-      "Convocamos todos os condôminos para a Assembleia Geral Ordinária que será realizada no dia 15/07/2024, às 19h, no Salão de Festas. Pauta: aprovação das contas, eleição do síndico e discussão sobre melhorias.",
-    tipo: "assembleia",
+    conteudo: "Convocamos todos os condôminos para a Assembleia Geral Ordinária que será realizada...",
+    categoria: "Assembleia",
     prioridade: "alta",
-    dataPublicacao: "2024-07-01",
-    dataEvento: "2024-07-15",
-    lido: true,
-    autor: "Administradora - Silva & Associados",
+    dataPublicacao: "2024-01-15",
+    dataExpiracao: "2024-02-15",
+    status: "ativo",
+    visualizacoes: 156,
+    autor: "Síndico",
   },
   {
     id: "3",
-    titulo: "Festa Junina do Condomínio",
-    conteudo:
-      "Venha participar da nossa Festa Junina! Será no dia 29/06/2024, a partir das 18h, no Salão de Festas. Haverá comidas típicas, quadrilha e muita diversão para toda a família.",
-    tipo: "evento",
-    prioridade: "baixa",
-    dataPublicacao: "2024-06-20",
-    dataEvento: "2024-06-29",
-    lido: true,
-    autor: "Comissão de Festas",
+    titulo: "Horário de Funcionamento da Piscina",
+    conteudo: "Informamos que o horário de funcionamento da piscina foi alterado para...",
+    categoria: "Informativo",
+    prioridade: "media",
+    dataPublicacao: "2024-01-10",
+    dataExpiracao: "2024-03-10",
+    status: "ativo",
+    visualizacoes: 67,
+    autor: "Administração",
   },
   {
     id: "4",
-    titulo: "Limpeza da Caixa D'água",
-    conteudo:
-      "Será realizada a limpeza semestral da caixa d'água no dia 12/07/2024, das 9h às 15h. Durante este período, poderá haver intermitência no fornecimento de água. Recomendamos armazenar água para uso.",
-    tipo: "manutencao",
-    prioridade: "media",
-    dataPublicacao: "2024-07-08",
-    dataEvento: "2024-07-12",
-    lido: false,
-    autor: "Zelador - João Santos",
+    titulo: "Obras no Estacionamento",
+    conteudo: "Comunicamos que serão realizadas obras de reparo no estacionamento...",
+    categoria: "Obras",
+    prioridade: "baixa",
+    dataPublicacao: "2024-01-05",
+    dataExpiracao: "2024-01-25",
+    status: "expirado",
+    visualizacoes: 45,
+    autor: "Administração",
   },
 ]
 
-export default function AvisosPage() {
+export default function AvisosAdminPage() {
   const { user } = useAuth()
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filterStatus, setFilterStatus] = useState("todos")
+  const [filterPrioridade, setFilterPrioridade] = useState("todas")
 
-  if (!user || user.role !== "morador") {
+  if (!user || user.role !== "admin") {
     return (
       <div className="text-center py-10">
-        <p className="text-red-500">Acesso negado. Apenas moradores podem acessar esta página.</p>
+        <p className="text-red-500">Acesso negado. Apenas administradores podem acessar esta página.</p>
       </div>
     )
   }
 
-  const getTipoIcon = (tipo: string) => {
-    switch (tipo) {
-      case "manutencao":
-        return <AlertTriangle className="h-5 w-5 text-orange-600" />
-      case "assembleia":
-        return <Calendar className="h-5 w-5 text-red-600" />
-      case "evento":
-        return <Calendar className="h-5 w-5 text-purple-600" />
-      default:
-        return <Info className="h-5 w-5 text-blue-600" />
-    }
-  }
+  const condominioAtual = user.condominios.find((c) => c.id === user.activeCondominioId)
 
-  const getTipoBadge = (tipo: string) => {
-    switch (tipo) {
-      case "manutencao":
-        return <Badge className="bg-orange-100 text-orange-800">Manutenção</Badge>
-      case "assembleia":
-        return <Badge className="bg-red-100 text-red-800">Assembleia</Badge>
-      case "evento":
-        return <Badge className="bg-purple-100 text-purple-800">Evento</Badge>
-      default:
-        return <Badge className="bg-blue-100 text-blue-800">Informativo</Badge>
-    }
-  }
+  const filteredAvisos = mockAvisos.filter((aviso) => {
+    const matchesSearch =
+      aviso.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      aviso.categoria.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesStatus = filterStatus === "todos" || aviso.status === filterStatus
+    const matchesPrioridade = filterPrioridade === "todas" || aviso.prioridade === filterPrioridade
+    return matchesSearch && matchesStatus && matchesPrioridade
+  })
 
-  const getPrioridadeBadge = (prioridade: string) => {
-    switch (prioridade) {
-      case "alta":
-        return <Badge variant="destructive">Alta</Badge>
-      case "media":
-        return <Badge className="bg-yellow-100 text-yellow-800">Média</Badge>
-      case "baixa":
-        return <Badge className="bg-green-100 text-green-800">Baixa</Badge>
-      default:
-        return <Badge variant="secondary">-</Badge>
-    }
-  }
-
-  const avisosNaoLidos = mockAvisos.filter((a) => !a.lido).length
-  const avisosHoje = mockAvisos.filter((a) => a.dataPublicacao === new Date().toISOString().split("T")[0]).length
+  const totalAvisos = mockAvisos.length
+  const avisosAtivos = mockAvisos.filter((a) => a.status === "ativo").length
+  const totalVisualizacoes = mockAvisos.reduce((sum, a) => sum + a.visualizacoes, 0)
+  const avisosAlta = mockAvisos.filter((a) => a.prioridade === "alta").length
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Avisos e Comunicados</h1>
-        <p className="text-gray-600">Fique por dentro de todas as informações do condomínio</p>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Avisos</h1>
+          <p className="text-gray-600">Gerencie avisos para moradores - {condominioAtual?.name}</p>
+        </div>
+        <div className="flex space-x-2">
+          <Button variant="outline">
+            <Send className="mr-2 h-4 w-4" />
+            Enviar por Email
+          </Button>
+          <Button asChild>
+            <Link href="/dashboard/comunicacao/avisos/novo">
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Aviso
+            </Link>
+          </Button>
+        </div>
       </div>
 
-      {/* Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-l-4 border-l-blue-500">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total de Avisos</p>
-                <p className="text-lg font-bold text-gray-900">{mockAvisos.length}</p>
-              </div>
-              <Bell className="h-8 w-8 text-blue-500" />
-            </div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total de Avisos</CardTitle>
+            <Bell className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalAvisos}</div>
+            <p className="text-xs text-muted-foreground">Publicados no sistema</p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-orange-500">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Não Lidos</p>
-                <p className="text-lg font-bold text-gray-900">{avisosNaoLidos}</p>
-              </div>
-              <AlertTriangle className="h-8 w-8 text-orange-500" />
-            </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avisos Ativos</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{avisosAtivos}</div>
+            <p className="text-xs text-muted-foreground">Visíveis para moradores</p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-green-500">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Publicados Hoje</p>
-                <p className="text-lg font-bold text-gray-900">{avisosHoje}</p>
-              </div>
-              <Calendar className="h-8 w-8 text-green-500" />
-            </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total de Visualizações</CardTitle>
+            <Eye className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{totalVisualizacoes}</div>
+            <p className="text-xs text-muted-foreground">Visualizações totais</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avisos Urgentes</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{avisosAlta}</div>
+            <p className="text-xs text-muted-foreground">Prioridade alta</p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Filtros */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Buscar avisos..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant={filterStatus === "todos" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterStatus("todos")}
+              >
+                Todos
+              </Button>
+              <Button
+                variant={filterStatus === "ativo" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterStatus("ativo")}
+              >
+                Ativos
+              </Button>
+              <Button
+                variant={filterStatus === "expirado" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterStatus("expirado")}
+              >
+                Expirados
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant={filterPrioridade === "todas" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterPrioridade("todas")}
+              >
+                Todas
+              </Button>
+              <Button
+                variant={filterPrioridade === "alta" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterPrioridade("alta")}
+              >
+                Alta
+              </Button>
+              <Button
+                variant={filterPrioridade === "media" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterPrioridade("media")}
+              >
+                Média
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Lista de Avisos */}
-      <div className="space-y-4">
-        {mockAvisos.map((aviso) => (
-          <Card key={aviso.id} className={`${!aviso.lido ? "border-l-4 border-l-blue-500 bg-blue-50" : ""}`}>
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex items-start space-x-3">
-                  {getTipoIcon(aviso.tipo)}
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <h3 className="font-medium text-gray-900">{aviso.titulo}</h3>
-                      {!aviso.lido && <Badge className="bg-blue-600">Novo</Badge>}
+      <Card>
+        <CardHeader>
+          <CardTitle>Avisos ({filteredAvisos.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {filteredAvisos.map((aviso) => (
+              <div
+                key={aviso.id}
+                className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+              >
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <h3 className="font-semibold">{aviso.titulo}</h3>
+                    <Badge variant={aviso.status === "ativo" ? "default" : "secondary"}>{aviso.status}</Badge>
+                    <Badge
+                      variant={
+                        aviso.prioridade === "alta"
+                          ? "destructive"
+                          : aviso.prioridade === "media"
+                            ? "default"
+                            : "outline"
+                      }
+                    >
+                      {aviso.prioridade}
+                    </Badge>
+                    <Badge variant="outline">{aviso.categoria}</Badge>
+                  </div>
+                  <p className="text-sm text-gray-600 line-clamp-2">{aviso.conteudo}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-500">
+                    <div className="flex items-center">
+                      <Calendar className="mr-1 h-3 w-3" />
+                      Publicado: {new Date(aviso.dataPublicacao).toLocaleDateString()}
                     </div>
-                    <div className="flex items-center space-x-2">
-                      {getTipoBadge(aviso.tipo)}
-                      {getPrioridadeBadge(aviso.prioridade)}
+                    <div className="flex items-center">
+                      <Calendar className="mr-1 h-3 w-3" />
+                      Expira: {new Date(aviso.dataExpiracao).toLocaleDateString()}
+                    </div>
+                    <div className="flex items-center">
+                      <Eye className="mr-1 h-3 w-3" />
+                      {aviso.visualizacoes} visualizações
+                    </div>
+                    <div className="flex items-center">
+                      <Users className="mr-1 h-3 w-3" />
+                      Por: {aviso.autor}
                     </div>
                   </div>
                 </div>
-                {aviso.lido && <CheckCircle className="h-5 w-5 text-green-500" />}
+                <div className="flex space-x-2 mt-2 sm:mt-0">
+                  <Button variant="outline" size="sm">
+                    <Edit className="mr-1 h-3 w-3" />
+                    Editar
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <Eye className="mr-1 h-3 w-3" />
+                    Ver
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <Trash2 className="mr-1 h-3 w-3" />
+                    Excluir
+                  </Button>
+                </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-700 mb-4">{aviso.conteudo}</p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs text-gray-500">
-                <p>
-                  <strong>Publicado em:</strong> {new Date(aviso.dataPublicacao).toLocaleDateString("pt-BR")}
-                </p>
-                {aviso.dataEvento && (
-                  <p>
-                    <strong>Data do evento:</strong> {new Date(aviso.dataEvento).toLocaleDateString("pt-BR")}
-                  </p>
-                )}
-                <p>
-                  <strong>Por:</strong> {aviso.autor}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Filtros Rápidos */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Filtros Rápidos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100">
-              <Bell className="h-6 w-6 text-blue-600 mx-auto mb-2" />
-              <p className="font-medium">Todos</p>
-              <p className="text-sm text-gray-600">{mockAvisos.length} avisos</p>
-            </div>
-            <div className="text-center p-4 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100">
-              <AlertTriangle className="h-6 w-6 text-orange-600 mx-auto mb-2" />
-              <p className="font-medium">Manutenção</p>
-              <p className="text-sm text-gray-600">{mockAvisos.filter((a) => a.tipo === "manutencao").length} avisos</p>
-            </div>
-            <div className="text-center p-4 bg-red-50 rounded-lg cursor-pointer hover:bg-red-100">
-              <Calendar className="h-6 w-6 text-red-600 mx-auto mb-2" />
-              <p className="font-medium">Assembleias</p>
-              <p className="text-sm text-gray-600">{mockAvisos.filter((a) => a.tipo === "assembleia").length} avisos</p>
-            </div>
-            <div className="text-center p-4 bg-purple-50 rounded-lg cursor-pointer hover:bg-purple-100">
-              <Calendar className="h-6 w-6 text-purple-600 mx-auto mb-2" />
-              <p className="font-medium">Eventos</p>
-              <p className="text-sm text-gray-600">{mockAvisos.filter((a) => a.tipo === "evento").length} avisos</p>
-            </div>
+            ))}
           </div>
         </CardContent>
       </Card>

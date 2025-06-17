@@ -2,97 +2,68 @@
 
 import type React from "react"
 
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/lib/auth-context"
-import { Calendar, ArrowLeft } from "lucide-react"
+import { ArrowLeft, Calendar, MapPin, Clock, DollarSign } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 
-const espacosDisponiveis = [
-  {
-    id: "salao",
-    nome: "Salão de Festas",
-    capacidade: 80,
-    valor: 150.0,
-    descricao: "Salão completo com som, iluminação e cozinha de apoio",
-    horarios: ["14:00-18:00", "19:00-23:00"],
-  },
-  {
-    id: "churrasqueira",
-    nome: "Churrasqueira",
-    capacidade: 30,
-    valor: 80.0,
-    descricao: "Área gourmet com churrasqueira e pia",
-    horarios: ["12:00-18:00", "19:00-23:00"],
-  },
-  {
-    id: "quadra",
-    nome: "Quadra Esportiva",
-    capacidade: 20,
-    valor: 0.0,
-    descricao: "Quadra poliesportiva para futebol, vôlei e basquete",
-    horarios: ["08:00-12:00", "14:00-18:00", "19:00-22:00"],
-  },
-  {
-    id: "piscina",
-    nome: "Área da Piscina",
-    capacidade: 50,
-    valor: 100.0,
-    descricao: "Área da piscina com deck e vestiários",
-    horarios: ["10:00-18:00"],
-  },
+const areasDisponiveis = [
+  { id: "salao", nome: "Salão de Festas", capacidade: 80, valor: 150.0 },
+  { id: "churrasqueira", nome: "Churrasqueira", capacidade: 30, valor: 80.0 },
+  { id: "quadra", nome: "Quadra Esportiva", capacidade: 20, valor: 0.0 },
+  { id: "piscina", nome: "Área da Piscina", capacidade: 50, valor: 50.0 },
+  { id: "playground", nome: "Playground", capacidade: 15, valor: 0.0 },
 ]
 
 export default function NovaReservaPage() {
   const { user } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
-    espaco: "",
+    area: "",
+    solicitante: "",
+    unidade: "",
     data: "",
-    horario: "",
+    horaInicio: "",
+    horaFim: "",
     evento: "",
     observacoes: "",
     numeroConvidados: "",
   })
 
-  if (!user || user.role !== "morador") {
+  if (!user || user.role !== "admin") {
     return (
       <div className="text-center py-10">
-        <p className="text-red-500">Acesso negado. Apenas moradores podem acessar esta página.</p>
+        <p className="text-red-500">Acesso negado.</p>
       </div>
     )
   }
 
-  const espacoSelecionado = espacosDisponiveis.find((e) => e.id === formData.espaco)
+  const areaSelecionada = areasDisponiveis.find((area) => area.id === formData.area)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsSubmitting(true)
+    setIsLoading(true)
 
-    // Simular criação da reserva
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    await new Promise((resolve) => setTimeout(resolve, 1500))
 
     toast({
-      title: "Reserva solicitada com sucesso!",
-      description: "Sua solicitação será analisada e você receberá uma confirmação em breve.",
+      title: "Reserva criada com sucesso!",
+      description: `A reserva do ${areaSelecionada?.nome} foi registrada.`,
     })
 
-    setIsSubmitting(false)
+    setIsLoading(false)
     router.push("/dashboard/reservas")
   }
-
-  // Data mínima é amanhã
-  const tomorrow = new Date()
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  const minDate = tomorrow.toISOString().split("T")[0]
 
   return (
     <div className="space-y-6">
@@ -103,203 +74,201 @@ export default function NovaReservaPage() {
             Voltar
           </Link>
         </Button>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Nova Reserva</h1>
-          <p className="text-gray-600">Reserve um espaço do condomínio para seu evento</p>
-        </div>
+        <h1 className="text-2xl font-bold text-gray-900">Nova Reserva</h1>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Calendar className="mr-2 h-5 w-5" />
-            Dados da Reserva
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Informações da Reserva */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <MapPin className="mr-2 h-5 w-5" />
+              Informações da Reserva
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="espaco">Espaço *</Label>
-              <select
-                id="espaco"
-                value={formData.espaco}
-                onChange={(e) => setFormData({ ...formData, espaco: e.target.value, horario: "" })}
-                className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              >
-                <option value="">Selecione um espaço</option>
-                {espacosDisponiveis.map((espaco) => (
-                  <option key={espaco.id} value={espaco.id}>
-                    {espaco.nome} - {espaco.valor > 0 ? `R$ ${espaco.valor.toFixed(2)}` : "Gratuito"}
-                  </option>
-                ))}
-              </select>
+              <Label htmlFor="area">Área a Reservar *</Label>
+              <Select value={formData.area} onValueChange={(value) => setFormData({ ...formData, area: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a área" />
+                </SelectTrigger>
+                <SelectContent>
+                  {areasDisponiveis.map((area) => (
+                    <SelectItem key={area.id} value={area.id}>
+                      {area.nome} - Capacidade: {area.capacidade} pessoas
+                      {area.valor > 0 ? ` - R$ ${area.valor.toFixed(2)}` : " - Gratuito"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            {espacoSelecionado && (
-              <Card className="bg-blue-50">
+            {areaSelecionada && (
+              <Card className="bg-blue-50 border-blue-200">
                 <CardContent className="p-4">
-                  <h4 className="font-medium text-blue-900 mb-2">{espacoSelecionado.nome}</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <h3 className="font-semibold text-blue-900 mb-2">{areaSelecionada.nome}</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <p className="text-blue-700">
-                        <strong>Capacidade:</strong> {espacoSelecionado.capacidade} pessoas
-                      </p>
+                      <span className="text-blue-700">Capacidade:</span>
+                      <span className="ml-2 font-medium">{areaSelecionada.capacidade} pessoas</span>
                     </div>
                     <div>
-                      <p className="text-blue-700">
-                        <strong>Valor:</strong>{" "}
-                        {espacoSelecionado.valor > 0 ? `R$ ${espacoSelecionado.valor.toFixed(2)}` : "Gratuito"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-blue-700">
-                        <strong>Horários disponíveis:</strong> {espacoSelecionado.horarios.join(", ")}
-                      </p>
+                      <span className="text-blue-700">Valor:</span>
+                      <span className="ml-2 font-medium">
+                        {areaSelecionada.valor > 0 ? `R$ ${areaSelecionada.valor.toFixed(2)}` : "Gratuito"}
+                      </span>
                     </div>
                   </div>
-                  <p className="text-blue-600 text-sm mt-2">{espacoSelecionado.descricao}</p>
                 </CardContent>
               </Card>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="data">Data do Evento *</Label>
+                <Label htmlFor="solicitante">Solicitante *</Label>
                 <Input
-                  id="data"
-                  type="date"
-                  value={formData.data}
-                  onChange={(e) => setFormData({ ...formData, data: e.target.value })}
-                  min={minDate}
+                  id="solicitante"
+                  value={formData.solicitante}
+                  onChange={(e) => setFormData({ ...formData, solicitante: e.target.value })}
+                  placeholder="Nome completo"
                   required
                 />
               </div>
               <div>
-                <Label htmlFor="horario">Horário *</Label>
-                <select
-                  id="horario"
-                  value={formData.horario}
-                  onChange={(e) => setFormData({ ...formData, horario: e.target.value })}
-                  className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                <Label htmlFor="unidade">Unidade *</Label>
+                <Input
+                  id="unidade"
+                  value={formData.unidade}
+                  onChange={(e) => setFormData({ ...formData, unidade: e.target.value })}
+                  placeholder="Ex: Apto 101"
                   required
-                  disabled={!espacoSelecionado}
-                >
-                  <option value="">Selecione um horário</option>
-                  {espacoSelecionado?.horarios.map((horario) => (
-                    <option key={horario} value={horario}>
-                      {horario}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Data e Horário */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Clock className="mr-2 h-5 w-5" />
+              Data e Horário
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="data">Data da Reserva *</Label>
+              <Input
+                id="data"
+                type="date"
+                value={formData.data}
+                onChange={(e) => setFormData({ ...formData, data: e.target.value })}
+                min={new Date().toISOString().split("T")[0]}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="evento">Tipo de Evento *</Label>
+                <Label htmlFor="horaInicio">Hora de Início *</Label>
                 <Input
-                  id="evento"
-                  value={formData.evento}
-                  onChange={(e) => setFormData({ ...formData, evento: e.target.value })}
-                  placeholder="Ex: Aniversário, Reunião familiar"
+                  id="horaInicio"
+                  type="time"
+                  value={formData.horaInicio}
+                  onChange={(e) => setFormData({ ...formData, horaInicio: e.target.value })}
                   required
                 />
               </div>
               <div>
-                <Label htmlFor="numeroConvidados">Número de Convidados *</Label>
+                <Label htmlFor="horaFim">Hora de Término *</Label>
                 <Input
-                  id="numeroConvidados"
-                  type="number"
-                  value={formData.numeroConvidados}
-                  onChange={(e) => setFormData({ ...formData, numeroConvidados: e.target.value })}
-                  placeholder="Ex: 30"
+                  id="horaFim"
+                  type="time"
+                  value={formData.horaFim}
+                  onChange={(e) => setFormData({ ...formData, horaFim: e.target.value })}
                   required
                 />
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Detalhes do Evento */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Calendar className="mr-2 h-5 w-5" />
+              Detalhes do Evento
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="evento">Tipo de Evento *</Label>
+              <Input
+                id="evento"
+                value={formData.evento}
+                onChange={(e) => setFormData({ ...formData, evento: e.target.value })}
+                placeholder="Ex: Aniversário, Confraternização, Reunião"
+                required
+              />
             </div>
 
             <div>
-              <Label htmlFor="observacoes">Observações (Opcional)</Label>
+              <Label htmlFor="numeroConvidados">Número de Convidados</Label>
+              <Input
+                id="numeroConvidados"
+                type="number"
+                value={formData.numeroConvidados}
+                onChange={(e) => setFormData({ ...formData, numeroConvidados: e.target.value })}
+                placeholder="Quantidade estimada"
+                max={areaSelecionada?.capacidade}
+              />
+              {areaSelecionada && formData.numeroConvidados && (
+                <p className="text-sm text-gray-600 mt-1">Capacidade máxima: {areaSelecionada.capacidade} pessoas</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="observacoes">Observações</Label>
               <Textarea
                 id="observacoes"
                 value={formData.observacoes}
                 onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-                placeholder="Informações adicionais sobre o evento"
+                placeholder="Informações adicionais sobre o evento..."
                 rows={3}
               />
             </div>
+          </CardContent>
+        </Card>
 
-            {/* Resumo da Reserva */}
-            {espacoSelecionado && formData.data && formData.horario && (
-              <Card className="bg-gray-50">
-                <CardContent className="p-4">
-                  <h4 className="font-medium text-gray-900 mb-3">Resumo da Reserva</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p>
-                        <strong>Espaço:</strong> {espacoSelecionado.nome}
-                      </p>
-                      <p>
-                        <strong>Data:</strong> {new Date(formData.data).toLocaleDateString("pt-BR")}
-                      </p>
-                      <p>
-                        <strong>Horário:</strong> {formData.horario}
-                      </p>
-                    </div>
-                    <div>
-                      <p>
-                        <strong>Evento:</strong> {formData.evento || "Não informado"}
-                      </p>
-                      <p>
-                        <strong>Convidados:</strong> {formData.numeroConvidados || "Não informado"}
-                      </p>
-                      <p>
-                        <strong>Valor:</strong>{" "}
-                        {espacoSelecionado.valor > 0 ? `R$ ${espacoSelecionado.valor.toFixed(2)}` : "Gratuito"}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+        {/* Resumo do Valor */}
+        {areaSelecionada && areaSelecionada.valor > 0 && (
+          <Card className="border-green-200 bg-green-50">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <DollarSign className="h-5 w-5 text-green-600" />
+                  <span className="font-semibold text-green-900">Valor da Reserva</span>
+                </div>
+                <span className="text-2xl font-bold text-green-600">R$ {areaSelecionada.valor.toFixed(2)}</span>
+              </div>
+              <p className="text-green-700 text-sm mt-2">O boleto será gerado após a confirmação da reserva.</p>
+            </CardContent>
+          </Card>
+        )}
 
-            <div className="flex space-x-4">
-              <Button type="submit" disabled={isSubmitting} className="flex-1">
-                {isSubmitting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Enviando Solicitação...
-                  </>
-                ) : (
-                  <>
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Solicitar Reserva
-                  </>
-                )}
-              </Button>
-              <Button type="button" variant="outline" asChild>
-                <Link href="/dashboard/reservas">Cancelar</Link>
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      {/* Regras de Reserva */}
-      <Card className="border-blue-200 bg-blue-50">
-        <CardContent className="p-6">
-          <h3 className="font-semibold text-blue-900 mb-2">Regras para Reservas</h3>
-          <ul className="text-blue-700 text-sm space-y-1">
-            <li>• Reservas devem ser feitas com pelo menos 24h de antecedência</li>
-            <li>• Máximo de 2 reservas por mês por unidade</li>
-            <li>• Pagamento deve ser feito até 48h antes do evento</li>
-            <li>• Cancelamentos com menos de 24h não têm reembolso</li>
-            <li>• É obrigatório deixar o espaço limpo após o uso</li>
-            <li>• Música alta permitida apenas até 22h</li>
-          </ul>
-        </CardContent>
-      </Card>
+        {/* Botões */}
+        <div className="flex space-x-4">
+          <Button type="submit" disabled={isLoading} className="flex-1">
+            {isLoading ? "Criando..." : "Criar Reserva"}
+          </Button>
+          <Button type="button" variant="outline" asChild>
+            <Link href="/dashboard/reservas">Cancelar</Link>
+          </Button>
+        </div>
+      </form>
     </div>
   )
 }
